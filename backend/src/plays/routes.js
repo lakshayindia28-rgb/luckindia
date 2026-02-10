@@ -73,6 +73,10 @@ function assertCanPlaySlotQuiz(db, slotId, quizType) {
   }
 }
 
+function canBypassPublishedLock(req) {
+  return req.user?.role === 'SUPER';
+}
+
 function upsertPlay(db, { vendorUserId, slotId, quizType, selectedNumber, tickets, priceEach, totalBet, createdByUserId }) {
   // If the vendor adds tickets again for the same number, we increment tickets + total_bet.
   db.prepare(
@@ -142,10 +146,12 @@ router.post('/', requireAuth, (req, res) => {
 
   const slot = ensureSlot(date, Number(hour));
 
-  try {
-    assertCanPlaySlotQuiz(db, slot.id, qt);
-  } catch (e) {
-    return res.status(e.statusCode || 409).json({ ok: false, error: e.message });
+  if (!canBypassPublishedLock(req)) {
+    try {
+      assertCanPlaySlotQuiz(db, slot.id, qt);
+    } catch (e) {
+      return res.status(e.statusCode || 409).json({ ok: false, error: e.message });
+    }
   }
 
   const prices = getCurrentPrices(db);
@@ -233,16 +239,20 @@ router.post('/bulk', requireAuth, (req, res) => {
 
   const slot = ensureSlot(date, Number(hour));
 
-  // Pre-check closed quizzes
-  const closed = [];
-  for (const p of parsed) {
-    const published = db
-      .prepare('SELECT 1 AS ok FROM results WHERE slot_id = ? AND quiz_type = ? LIMIT 1')
-      .get(slot.id, p.quizType);
-    if (published) closed.push(p.quizType);
-  }
-  if (closed.length > 0) {
-    return res.status(409).json({ ok: false, error: 'SLOT CLOSED: result already published', closed: Array.from(new Set(closed)) });
+  if (!canBypassPublishedLock(req)) {
+    // Pre-check closed quizzes
+    const closed = [];
+    for (const p of parsed) {
+      const published = db
+        .prepare('SELECT 1 AS ok FROM results WHERE slot_id = ? AND quiz_type = ? LIMIT 1')
+        .get(slot.id, p.quizType);
+      if (published) closed.push(p.quizType);
+    }
+    if (closed.length > 0) {
+      return res
+        .status(409)
+        .json({ ok: false, error: 'SLOT CLOSED: result already published', closed: Array.from(new Set(closed)) });
+    }
   }
 
   const prices = getCurrentPrices(db);
@@ -293,6 +303,9 @@ router.get('/lock-status', requireAuth, (req, res) => {
       } catch (e) {
         return res.status(403).json({ ok: false, error: e.message });
       }
+
+      // SUPER can enter plays even after results are published, so don't mark anything locked.
+      return res.json({ ok: true, locked: { SILVER: false, GOLD: false, DIAMOND: false } });
     }
   }
 

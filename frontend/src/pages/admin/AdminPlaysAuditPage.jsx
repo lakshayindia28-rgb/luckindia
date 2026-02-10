@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { apiFetch } from '@/services/api'
+import { SLOT_OPTIONS, formatHourTime } from '@/lib/slots'
 
 function pad2(n) {
   return String(n).padStart(2, '0')
@@ -128,9 +129,9 @@ export default function AdminPlaysAuditPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={ALL}>All</SelectItem>
-                  {Array.from({ length: 24 }).map((_, h) => (
-                    <SelectItem key={h} value={String(h)}>
-                      {pad2(h)}:00
+                  {SLOT_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -230,7 +231,7 @@ export default function AdminPlaysAuditPage() {
                 rows.map((r) => (
                   <tr key={r.id} className="hover:bg-white/5">
                     <td className="px-3 py-2 text-zinc-200">
-                      {r.slot_date} {pad2(r.slot_hour)}:00
+                      {r.slot_date} {formatHourTime(r.slot_hour)}
                     </td>
                     <td className="px-3 py-2">
                       <div className="text-zinc-100">{r.vendor_username}</div>

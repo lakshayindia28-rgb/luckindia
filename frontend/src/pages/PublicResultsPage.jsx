@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -37,6 +37,15 @@ export default function PublicResultsPage() {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const dateInputRef = useRef(null)
+
+  function openDatePicker() {
+    const el = dateInputRef.current
+    if (!el) return
+    if (typeof el.showPicker === 'function') el.showPicker()
+    else el.focus()
+  }
 
   const title = useMemo(() => `Results • ${date}`, [date])
 
@@ -97,7 +106,15 @@ export default function PublicResultsPage() {
 
               <div className="w-full max-w-xs">
                 <div className="text-xs text-zinc-300/80">Select date</div>
-                <Input className="mt-2 bg-zinc-950/40" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+                <Input
+                  ref={dateInputRef}
+                  className="mt-2 bg-zinc-950/40 text-zinc-100 [color-scheme:light] [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-95"
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  onClick={openDatePicker}
+                  onFocus={openDatePicker}
+                />
               </div>
             </div>
           </div>
