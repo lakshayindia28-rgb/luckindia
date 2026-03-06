@@ -13,6 +13,22 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build frontend (on CI runner — not on server)
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
       - name: Configure SSH
         shell: bash
         env:
@@ -26,7 +42,17 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -p "$EC2_PORT" -H "$EC2_HOST" >> ~/.ssh/known_hosts
 
-      - name: Deploy
+      - name: Upload frontend dist to server
+        shell: bash
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_PORT: ${{ secrets.EC2_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          scp -i ~/.ssh/id_rsa -P "$EC2_PORT" -r frontend/dist "$EC2_USER@$EC2_HOST:/home/ubuntu/frontend_dist_new"
+
+      - name: Deploy backend + publish frontend
         shell: bash
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
