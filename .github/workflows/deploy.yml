@@ -1,4 +1,4 @@
-name: Deploy to EC2
+name: Deploy to Lightsail
 
 on:
   push:
@@ -32,8 +32,9 @@ jobs:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_USER: ${{ secrets.EC2_USER }}
           EC2_PORT: ${{ secrets.EC2_PORT || '22' }}
+          GH_PAT: ${{ secrets.GH_PAT }}
         run: |
           set -euo pipefail
-          REPO_URL="https://github.com/${GITHUB_REPOSITORY}.git"
+          REPO_URL="https://x-access-token:${GH_PAT}@github.com/${GITHUB_REPOSITORY}.git"
           ssh -i ~/.ssh/id_rsa -p "$EC2_PORT" "$EC2_USER@$EC2_HOST" \
             "set -euo pipefail; export REPO_URL='${REPO_URL}'; bash /home/ubuntu/app/deploy.sh"

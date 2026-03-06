@@ -11,13 +11,27 @@ fi
 
 cd "$APP_DIR"
 
+# First-time setup: initialize git repo if not already
+if [[ ! -d "$APP_DIR/.git" ]]; then
+  echo "==> First-time git init"
+  git init
+  git remote add origin "${REPO_URL:-https://github.com/lakshayindia28-rgb/luckindia.git}"
+fi
+
 if [[ -n "$REPO_URL" ]]; then
-  echo "==> Ensuring git remote origin matches REPO_URL"
+  echo "==> Configuring git remote with credentials"
   git remote set-url origin "$REPO_URL"
 fi
 
-echo "==> Pulling latest code"
-git pull
+echo "==> Fetching latest code"
+git fetch origin
+git reset --hard origin/main
+
+# Strip token from remote URL so it's not stored in .git/config
+if [[ -n "$REPO_URL" ]]; then
+  CLEAN_URL=$(echo "$REPO_URL" | sed 's|https://[^@]*@|https://|')
+  git remote set-url origin "$CLEAN_URL"
+fi
 
 echo "==> Backend install + restart"
 cd "$APP_DIR/backend"
